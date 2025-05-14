@@ -10,69 +10,7 @@ Original file is located at
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-
-from google.colab import drive
-drive.mount('/content/drive')
-
-"""####Произведёмзагрузку дф подходящую для данной задачи (работы с библиотекой SentenceTransformer)"""
-
-file_path = '/content/drive/MyDrive/cleaned_answers.csv'
-cl_answers_data = pd.read_csv(file_path)
-file_path = '/content/drive/MyDrive/cl_questions_data.csv'
-cl_questions_data = pd.read_csv(file_path)
-file_path = '/content/drive/MyDrive/cl_tags_data.csv'
-cl_tags_data = pd.read_csv(file_path)
-
-"""копирую  функцию  объединения из 4 лабораторной
-
-"""
-
-# Для answers_data: удаляем строки, где OwnerUserId - NaN
-cl_answers_data = cl_answers_data.dropna(subset=['OwnerUserId'])
-# Преобразуем OwnerUserId в int
-cl_answers_data['OwnerUserId'] = cl_answers_data['OwnerUserId'].astype(int)
-
-cl_questions_data = cl_questions_data.dropna(subset=['OwnerUserId'])
-cl_questions_data['OwnerUserId'] = cl_questions_data['OwnerUserId'].astype(int)
-# Переименовываем Id для будущего мержа
-cl_questions_data = cl_questions_data.rename(columns={'Id': 'QuestionId'})
-
-cl_tags_data = cl_tags_data.dropna(subset=['Tag'])
-
-# Мерджим questions_data и answers_data
-# (left merge чтобы сохранить все вопросы, даже без ответов)
-big_data = pd.merge(
-    cl_questions_data,
-    cl_answers_data,
-    left_on='QuestionId',
-    right_on='ParentId',
-    how='left',
-    suffixes=('_question', '_answer')
-)
-
-cl_tags_data = cl_tags_data.rename(columns={'Id': 'QuestionId'})
-big_data_with_tags = pd.merge(
-    big_data,
-    cl_tags_data,
-    on='QuestionId',
-    how='left'
-)
-
-# 4. Удаляем дублирующиеся столбцы
-columns_to_drop = ['ParentId']
-for col in ['Id_x', 'Id_y']:
-    if col in big_data.columns:
-        columns_to_drop.append(col)
-big_data = big_data.drop(columns=columns_to_drop, errors='ignore')
-
-"""пропускаю лемматизацию, тк ОНА уменьшает количество контекста в предложении и мешает более точному составлению его векторного представления     """
-
-big_data_with_tags = big_data_with_tags.dropna(subset=['Score_answer'])
-big_data_with_tags['Score_answer'] = big_data_with_tags['Score_answer'].astype(int)
-big_data_with_tags = big_data_with_tags.dropna(subset=['Id'])
-big_data_with_tags['Id'] = big_data_with_tags['Id'].astype(int)
-big_data_with_tags.to_csv('/content/drive/MyDrive/data_without_lemma.csv', index=False)
-print("df успешно сохранен в Google Drive как data_without_lemma.csv")
+from sentence_transformers import SentenceTransformer
 
 file_path = '/content/drive/MyDrive/data_without_lemma.csv'
 new_data = pd.read_csv(file_path)
@@ -81,11 +19,7 @@ new_data.head(3)
 
 """## Генерация эмбеддингов"""
 
-!pip install -U sentence-transformers
-
-import pandas as pd
-from sentence_transformers import SentenceTransformer
-import numpy as np
+#!pip install -U sentence-transformers
 
 #  копирую данные без дубликатов QuestionId
 unique_questions = new_data.drop_duplicates(subset=['QuestionId'], keep='first').copy()
